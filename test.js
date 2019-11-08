@@ -79,7 +79,7 @@ window.onload = function () {
         document.body.appendChild(div);
     }, 8)
 
-    renderFriendList();
+    // renderFriendList();
 
 
     // 文本输入框对应多种校验规则
@@ -168,5 +168,109 @@ window.onload = function () {
 
         alert('验证通过');
     }
+
+    // 职责链模式
+
+    // 普通书写方式
+    var order = function(orderType,pay,stock){
+        if(orderType === 1 && pay === true){
+            console.log('500元定金预购，得到100优惠券');
+        }else if(orderType === 2 && pay === true){
+            console.log('200元定金预购，得到50优惠券');
+        }else if(stock > 0){
+            console.log('普通购买，无优惠券');
+        }else{
+            console.log('库存不足');
+        }
+    }
+
+    order(1,true,500);
+    order(1,false,500);
+    order(2,true,500);
+    order(3,false,500);
+    order(3,true,0);
+
+    // 高级方式
+    var order500 = function(orderType,pay,stock){
+        if(orderType === 1 && pay === true){
+            console.log('500元定金预购，得到100优惠券');
+        }else{
+            return 'nextSuccessor'
+        }
+    }
+
+    var order200 = function(orderType,pay,stock){
+        if(orderType === 2 && pay === true){
+            console.log('200元定金预购，得到50优惠券');
+        }else{
+            return 'nextSuccessor'
+        }
+    }
+
+    var orderNormal = function(orderType,pay,stock){
+        if(stock > 0){
+            console.log('普通购买，无优惠券');
+        }else{
+            console.log('库存不足');
+        }
+    }
+
+    // 构造函数Chain
+    var Chain = function(fn){
+        this.fn = fn;
+        this.successor = null;
+    }
+
+    Chain.prototype.setNextSuccessor = function(successor){
+        this.successor = successor;
+    }
+
+    Chain.prototype.passRequest = function () {
+        var ret = this.fn.apply(this, arguments);
+        if (ret === 'nextSuccessor') {
+            return this.successor && this.successor.passRequest.apply(this.successor, arguments);
+        }
+        return ret;
+    }
+
+    var chainOrder500 = new Chain(order500);
+    var chainOrder200 = new Chain(order200);
+    var chainOrderNormal = new Chain(orderNormal);
+
+    chainOrder500.setNextSuccessor(chainOrder200);
+    chainOrder200.setNextSuccessor(chainOrderNormal);
+
+    console.log('****************');
+    chainOrder500.passRequest(1,true,500);
+    chainOrder500.passRequest(1,false,500);
+    chainOrder500.passRequest(2,true,500);
+    chainOrder500.passRequest(3,true,500);
+    chainOrder500.passRequest(1,false,0);
+
+
+    // *********************AOP装饰函数
+    // 将一个对象嵌入另一个对象之中，实际上相当于这个对象被另一个对象包装起来，形成一条包装链，请求随着这条链依次递到所有的对象
+    console.log('**************');
+    this.Function.prototype.after = function(afterFn){
+        var _self = this;
+        return function(){
+            var ret = _self.apply(this,arguments);
+            afterFn.apply(this,arguments);
+            console.log('ret',ret);
+            return ret;
+        }
+    }
+
+    var showLogin = function(){
+        console.log('打开登录浮层');
+    }
+
+    var log = function(){
+        console.log('上报标签为:'+this.getAttribute('tag'));
+    }
+
+    showLogin = showLogin.after(log);
+
+    document.getElementById('button').onclick = showLogin;
 
 }
